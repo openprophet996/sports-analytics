@@ -241,6 +241,21 @@ header{display:flex;align-items:center;justify-content:space-between;padding:20p
 
     <div class="card" style="margin-bottom:20px">
       <div class="card-title">Polymarket 市场赔率</div>
+
+      <!-- 赛事浏览器 -->
+      <div style="margin-bottom:14px">
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px">
+          <button class="btn" onclick="loadPMEvents('nba')"
+            style="background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.3);color:var(--accent2);padding:8px 18px">
+            <span id="nba_pmSpinner" class="spinner" style="display:none;border-top-color:var(--accent2)"></span>
+            📋 加载当前 NBA 赛事
+          </button>
+          <span style="font-size:11px;color:var(--text2)">点击比赛自动填入赔率</span>
+        </div>
+        <div id="nba_pmEvents" style="display:none;max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px"></div>
+        <div id="nba_pmStatus" style="font-size:12px;margin-top:8px;display:none"></div>
+      </div>
+
       <div class="grid-3">
         <div class="form-group"><label>A胜 市场价 (¢)</label><input type="number" id="nba_mktA" placeholder="55" min="1" max="99" step="0.1"></div>
         <div class="form-group"><label>B胜 市场价 (¢)</label><input type="number" id="nba_mktB" placeholder="45" min="1" max="99" step="0.1"></div>
@@ -276,9 +291,9 @@ header{display:flex;align-items:center;justify-content:space-between;padding:20p
 
     <!-- API-Football Key 设置 -->
     <div class="card" style="margin-bottom:20px;border-color:rgba(255,215,0,0.2)">
-      <div class="card-title" style="color:var(--accent4)">🔑 Sofascore API Key（你已有的 Key 直接用）</div>
+      <div class="card-title" style="color:var(--accent4)">🔑 AllSportsApi Key（免费 · 无CORS限制）</div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-        <input type="password" id="soc_apiKey" placeholder="粘贴你的 x-rapidapi-key..."
+        <input type="password" id="soc_apiKey" placeholder="粘贴 allsportsapi.com 的 API Key..."
           style="flex:1;min-width:200px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,215,0,0.2);border-radius:8px;padding:10px 14px;color:var(--text);font-family:'Space Mono';font-size:13px;outline:none"
           value="">
         <button class="btn" style="background:rgba(255,215,0,0.1);border:1px solid rgba(255,215,0,0.3);color:var(--accent4)"
@@ -286,7 +301,8 @@ header{display:flex;align-items:center;justify-content:space-between;padding:20p
         <span id="soc_keyStatus" style="font-size:12px;color:var(--text2)">未设置</span>
       </div>
       <div style="font-size:11px;color:var(--text2);margin-top:10px;line-height:1.7">
-        直接使用你已有的 RapidAPI Key（sofascore.p.rapidapi.com）· Key 仅存本地浏览器
+        注册免费Key：<a href="https://allsportsapi.com" target="_blank" style="color:var(--accent4)">allsportsapi.com</a>
+        &nbsp;·&nbsp; 直接支持浏览器调用，无需 RapidAPI
       </div>
     </div>
 
@@ -361,6 +377,21 @@ header{display:flex;align-items:center;justify-content:space-between;padding:20p
 
     <div class="card" style="margin-bottom:20px">
       <div class="card-title">Polymarket 市场赔率</div>
+
+      <!-- 赛事浏览器 -->
+      <div style="margin-bottom:14px">
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px">
+          <button class="btn" onclick="loadPMEvents('soc')"
+            style="background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.3);color:var(--accent2);padding:8px 18px">
+            <span id="soc_pmSpinner" class="spinner" style="display:none;border-top-color:var(--accent2)"></span>
+            📋 加载当前足球赛事
+          </button>
+          <span style="font-size:11px;color:var(--text2)">点击比赛自动填入赔率</span>
+        </div>
+        <div id="soc_pmEvents" style="display:none;max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px"></div>
+        <div id="soc_pmStatus" style="font-size:12px;margin-top:8px;display:none"></div>
+      </div>
+
       <div class="grid-3">
         <div class="form-group"><label>主队胜 (¢)</label><input type="number" id="soc_mktA" placeholder="55" min="1" max="98" step="0.1"></div>
         <div class="form-group"><label>平局 (¢)</label><input type="number" id="soc_mktDraw" placeholder="25" min="1" max="98" step="0.1"></div>
@@ -801,6 +832,198 @@ function probBar(label,pct,mktPct,color,ev,kellyAmt){
   </div>`;
 }
 
+
+// ═══════════════════════════════════════════
+// POLYMARKET 赔率自动拉取
+// ═══════════════════════════════════════════
+
+const PM_TAGS = { nba: 100639, soc: 100630 };
+const CF_WORKER = 'https://snowy-frog-09b0.winnertay4400.workers.dev';
+
+async function pmFetch(url){
+  // 用自己的 Cloudflare Worker 中转，稳定无限制
+  const path = url.replace('https://gamma-api.polymarket.com','');
+  const res = await fetch(CF_WORKER + path);
+  if(!res.ok) throw new Error(`Worker 错误 ${res.status}`);
+  const data = await res.json();
+  return Array.isArray(data) ? data : [];
+}
+
+function filterPMEvents(sport){
+  const q = document.getElementById(`${sport}_pmSearch`).value.toLowerCase();
+  document.querySelectorAll(`#${sport}_pmList > div`).forEach(el=>{
+    el.style.display = el.dataset.title?.includes(q) ? '' : 'none';
+  });
+}
+
+async function loadPMEvents(sport){
+  const eventsEl = document.getElementById(`${sport}_pmEvents`);
+  const statusEl = document.getElementById(`${sport}_pmStatus`);
+  const spinner  = document.getElementById(`${sport}_pmSpinner`);
+  spinner.style.display='inline-block';
+  eventsEl.style.display='none';
+  statusEl.style.display='block';
+  statusEl.innerHTML='<span style="color:var(--accent2)">🔄 加载比赛列表...</span>';
+  try{
+    // 同时查询多个运动分类
+    const tagSlugs = sport==='nba'
+      ? ['nba']
+      : ['epl','soccer','laliga','serie-a','bundesliga','ligue-1','champions-league','mls'];
+
+    let allEvents = [];
+    for(const tag of tagSlugs){
+      try{
+        const pmUrl = `https://gamma-api.polymarket.com/events?active=true&closed=false&limit=30&order=startDate&ascending=true&tag_slug=${tag}`;
+        const chunk = await pmFetch(pmUrl);
+        allEvents = allEvents.concat(chunk);
+      }catch{}
+    }
+    // 去重
+    const seen = new Set();
+    const events = allEvents.filter(ev=>{ if(seen.has(ev.slug)) return false; seen.add(ev.slug); return true; });
+
+    if(!events.length){ statusEl.innerHTML='<span style="color:var(--text2)">暂无活跃比赛</span>'; spinner.style.display='none'; return; }
+
+    if(!events.length){ statusEl.innerHTML='<span style="color:var(--text2)">暂无活跃比赛</span>'; spinner.style.display='none'; return; }
+
+    // 搜索框 + 全部赛事列表
+    eventsEl.innerHTML = `
+      <div style="padding:8px 12px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg)">
+        <input id="${sport}_pmSearch" type="text" placeholder="搜索比赛名称..."
+          oninput="filterPMEvents('${sport}')"
+          style="width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:12px;outline:none;box-sizing:border-box">
+      </div>
+      <div id="${sport}_pmList">
+        ${events.map(ev=>{
+          const markets = ev.markets||[];
+          const winMkt = markets.find(m=>{ const q=(m.question||'').toLowerCase(); return !q.includes('spread')&&!q.includes('total')&&!q.includes('over'); })||markets[0];
+          let priceStr='';
+          if(winMkt?.outcomePrices){
+            try{ const p=JSON.parse(winMkt.outcomePrices).map(x=>+(parseFloat(x)*100).toFixed(0)); priceStr=p.map(x=>`${x}¢`).join(' / '); }catch{}
+          }
+          const t = ev.startDate ? new Date(ev.startDate).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+          return `<div onclick="selectPMEvent('${sport}','${ev.slug}')" data-title="${(ev.title||'').toLowerCase()}"
+            style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:.15s"
+            onmouseover="this.style.background='rgba(0,212,255,0.06)'" onmouseout="this.style.background='transparent'">
+            <div>
+              <div style="font-size:13px;font-weight:700">${ev.title||ev.slug}</div>
+              <div style="font-size:11px;color:var(--text2);margin-top:2px">${t} · ${markets.length}个市场</div>
+            </div>
+            <div style="font-size:12px;color:var(--accent2);font-family:'Space Mono'">${priceStr}</div>
+          </div>`;
+        }).join('')}
+      </div>`;
+
+    eventsEl.style.display='block';
+    statusEl.innerHTML=`<span style="color:var(--accent)">✅ 找到 ${events.length} 场比赛，可搜索筛选</span>`;
+  }catch(e){
+    statusEl.innerHTML=`<span style="color:var(--accent3)">⚠️ ${e.message}</span>`;
+  }
+  spinner.style.display='none';
+}
+
+async function selectPMEvent(sport, slug){
+  const statusEl = document.getElementById(`${sport}_pmStatus`);
+  const eventsEl = document.getElementById(`${sport}_pmEvents`);
+  statusEl.innerHTML='<span style="color:var(--accent2)">🔄 加载赔率...</span>';
+  try{
+    const pmUrl = `https://gamma-api.polymarket.com/events?slug=${slug}&limit=1`;
+    const data = await pmFetch(pmUrl);
+    if(!data.length) throw new Error('找不到数据');
+    const event = data[0];
+    const markets = event.markets||[];
+    console.log('所有市场:', markets.map(m=>({q:m.question, outcomes:m.outcomes, prices:m.outcomePrices})));
+    const filled = [];
+
+    function setF(id,v){
+      const el=document.getElementById(id);
+      if(!el||v===undefined) return;
+      el.value=v;
+      el.style.boxShadow='0 0 0 3px rgba(0,212,255,0.2)';
+      el.style.borderColor='rgba(0,212,255,0.5)';
+      setTimeout(()=>{el.style.boxShadow='';el.style.borderColor='';},2500);
+    }
+
+    markets.forEach(m=>{
+      const q=(m.question||'').toLowerCase();
+      let prices,outcomes;
+      try{
+        prices=JSON.parse(m.outcomePrices||'[]').map(p=>+(parseFloat(p)*100).toFixed(1));
+        outcomes=JSON.parse(m.outcomes||'[]').map(o=>(o||'').toLowerCase());
+      }catch{ return; }
+      if(prices.length<2) return;
+
+      if(sport==='nba'){
+        if(!q.includes('spread')&&!q.includes('total')&&!q.includes('over')&&prices.length===2){
+          setF('nba_mktA',prices[0]); setF('nba_mktB',prices[1]);
+          filled.push(`胜负 ${prices[0]}¢/${prices[1]}¢`);
+        }
+        if(q.includes('spread')||q.includes('handicap')){ setF('nba_mktSpreadA',prices[0]); filled.push(`让分 ${prices[0]}¢`); }
+        if(q.includes('total')||q.includes('over/under')){ setF('nba_mktOver',prices[0]); filled.push(`大球 ${prices[0]}¢`); }
+      }
+
+      if(sport==='soc'){
+        // Polymarket 足球格式：
+        // Moneyline: outcomes=['CRY','Draw','WHU'] prices=[0.37,0.29,0.36]  (3结果)
+        // Spreads:   question包含'spread'  prices=[home_price, away_price]
+        // Totals:    question包含'total' or 'over'
+
+        const isMoneyline = !q.includes('spread') && !q.includes('total') &&
+                            !q.includes('over') && !q.includes('goal') &&
+                            !q.includes('score') && !q.includes('corner');
+
+        if(isMoneyline && prices.length===3){
+          // 找 Draw — 通常是中间那个 outcome
+          const di = outcomes.findIndex(o=>o.includes('draw')||o==='x'||o==='tie'||o==='d');
+          if(di>=0){
+            // home = 第一个非draw, away = 最后一个非draw
+            const nonDraw = outcomes.map((o,i)=>i).filter(i=>i!==di);
+            setF('soc_mktA',  prices[nonDraw[0]]);
+            setF('soc_mktDraw',prices[di]);
+            setF('soc_mktB',  prices[nonDraw[1]]);
+            filled.push(`主${prices[nonDraw[0]]}¢ 平${prices[di]}¢ 客${prices[nonDraw[1]]}¢`);
+          } else {
+            // 没有明显Draw标签，按顺序填（home/draw/away）
+            setF('soc_mktA',   prices[0]);
+            setF('soc_mktDraw', prices[1]);
+            setF('soc_mktB',   prices[2]);
+            filled.push(`主${prices[0]}¢ 平${prices[1]}¢ 客${prices[2]}¢`);
+          }
+        }
+
+        if(isMoneyline && prices.length===2){
+          setF('soc_mktA', prices[0]);
+          setF('soc_mktB', prices[1]);
+          filled.push(`主${prices[0]}¢ 客${prices[1]}¢`);
+        }
+
+        if(q.includes('total')||q.includes('over/under')){
+          // Over 是第一个 outcome
+          setF('soc_mktOver', prices[0]);
+          filled.push(`大球 ${prices[0]}¢`);
+        }
+
+        if(q.includes('spread')||q.includes('handicap')){
+          // 主队让球价 = 第一个
+          setF('soc_mktSpread', prices[0]);
+          filled.push(`让球 ${prices[0]}¢`);
+        }
+      }
+    });
+
+    if(!filled.length){
+      const m2=markets.find(m=>{try{return JSON.parse(m.outcomePrices).length===2;}catch{return false;}});
+      if(m2){ const p=JSON.parse(m2.outcomePrices).map(x=>+(parseFloat(x)*100).toFixed(1)); if(sport==='nba'){setF('nba_mktA',p[0]);setF('nba_mktB',p[1]);}else{setF('soc_mktA',p[0]);setF('soc_mktB',p[1]);} filled.push(`${p[0]}¢/${p[1]}¢`); }
+    }
+
+    eventsEl.style.display='none';
+    statusEl.innerHTML=`<span style="color:var(--accent)">✅ 已选：${event.title||slug}</span> <span style="color:var(--text2);margin-left:8px">${filled.join(' · ')}</span>`;
+  }catch(e){
+    statusEl.innerHTML=`<span style="color:var(--accent3)">⚠️ ${e.message}</span>`;
+  }
+}
+
+
 // ═══════════════════════════════════════════
 // NBA 分析引擎
 // ═══════════════════════════════════════════
@@ -965,147 +1188,59 @@ function runNBAAnalysis(){
 }
 
 // ═══════════════════════════════════════════
-// SOFASCORE — 内置球队ID对照表
-// 只用 get-last-matches 端点（你已订阅的）
-// teamId 来源：sofascore.com 官网各球队页URL
+// 足球数据双来源：
+// 1. AllSportsApi — 球队搜索（需要Key）
+// 2. TheSportsDB  — 历史比赛（完全免费，无需Key）
 // ═══════════════════════════════════════════
 
-const SS_HOST = 'sofascore.p.rapidapi.com';
-const SS_BASE = 'https://sofascore.p.rapidapi.com';
+const ASA_BASE  = 'https://apiv2.allsportsapi.com/football';
+const TSDB_BASE = 'https://www.thesportsdb.com/api/v1/json/3';
 
-// 球队名 → Sofascore teamId
-// 支持多个别名匹配同一支球队
-const TEAM_IDS = {
-  // 英超
-  'arsenal':17,'arsenal fc':17,
-  'chelsea':38,'chelsea fc':38,
-  'manchester city':17,'man city':65,'mancity':65,
-  'manchester united':35,'man united':35,'man utd':35,
-  'liverpool':44,'liverpool fc':44,
-  'tottenham':33,'spurs':33,'tottenham hotspur':33,
-  'newcastle':39,'newcastle united':39,
-  'aston villa':40,'aston villa fc':40,
-  'west ham':37,'west ham united':37,
-  'brighton':211,'brighton fc':211,
-  'brentford':2762,'brentford fc':2762,
-  'fulham':43,'fulham fc':43,
-  'crystal palace':7,'crystal palace fc':7,
-  'everton':48,'everton fc':48,
-  'nottingham forest':14,'nottm forest':14,
-  'wolverhampton':3,'wolves':3,'wolverhampton wanderers':3,
-  'bournemouth':60,'afc bournemouth':60,
-  'leicester':31,'leicester city':31,
-  'ipswich':32,'ipswich town':32,
-  'southampton':45,'southampton fc':45,
-  // 西甲
-  'real madrid':2829,'real madrid cf':2829,
-  'barcelona':2817,'fc barcelona':2817,'barca':2817,
-  'atletico madrid':2836,'atletico de madrid':2836,
-  'sevilla':2833,'sevilla fc':2833,
-  'real sociedad':2859,'real sociedad fc':2859,
-  'villarreal':2815,'villarreal cf':2815,
-  'athletic bilbao':2825,'athletic club':2825,
-  'real betis':2816,'real betis balompie':2816,
-  'osasuna':2850,'ca osasuna':2850,
-  'getafe':2824,'getafe cf':2824,
-  'girona':3833,'girona fc':3833,
-  'rayo vallecano':2856,'rayo':2856,
-  'celta vigo':2820,'rc celta':2820,
-  'valencia':2821,'valencia cf':2821,
-  'espanyol':2814,'rcd espanyol':2814,
-  'alaves':2813,'deportivo alaves':2813,
-  'mallorca':2847,'rcd mallorca':2847,
-  'las palmas':2843,'ud las palmas':2843,
-  'leganes':5549,'cd leganes':5549,
-  'valladolid':2862,'real valladolid':2862,
-  // 意甲
-  'juventus':2686,'juventus fc':2686,'juve':2686,
-  'inter milan':2697,'inter':2697,'internazionale':2697,'inter milan fc':2697,
-  'ac milan':2692,'milan':2692,
-  'napoli':2714,'ssc napoli':2714,
-  'roma':2703,'as roma':2703,
-  'lazio':2691,'ss lazio':2691,
-  'atalanta':2695,'atalanta bc':2695,
-  'fiorentina':2699,'acf fiorentina':2699,
-  'torino':2704,'torino fc':2704,
-  'bologna':2698,'bologna fc':2698,
-  'udinese':2707,'udinese calcio':2707,
-  'genoa':2700,'genoa cfc':2700,
-  'cagliari':2696,'cagliari calcio':2696,
-  'lecce':2711,'us lecce':2711,
-  'hellas verona':2706,'verona':2706,
-  'empoli':2690,'empoli fc':2690,
-  'parma':2702,'parma calcio':2702,
-  'como':2689,'como 1907':2689,
-  'venezia':2708,'venezia fc':2708,
-  'monza':2813,'ac monza':17537,
-  // 德甲
-  'bayern munich':2672,'fc bayern':2672,'bayern':2672,'fc bayern munich':2672,
-  'borussia dortmund':2673,'dortmund':2673,'bvb':2673,
-  'bayer leverkusen':2681,'leverkusen':2681,
-  'rb leipzig':23826,'leipzig':23826,'rasenballsport leipzig':23826,
-  'eintracht frankfurt':2674,'frankfurt':2674,
-  'vfb stuttgart':2675,'stuttgart':2675,
-  'borussia monchengladbach':2676,'gladbach':2676,
-  'sc freiburg':2671,'freiburg':2671,
-  'union berlin':21695,'1. fc union berlin':21695,
-  'werder bremen':2677,'sv werder bremen':2677,
-  'vfl wolfsburg':2678,'wolfsburg':2678,
-  'hoffenheim':2679,'tsv hoffenheim':2679,
-  'fc augsburg':2670,'augsburg':2670,
-  'vfl bochum':2680,'bochum':2680,
-  'mainz':2682,'1. fsv mainz 05':2682,
-  'hamburger sv':2683,'hsv':2683,
-  'fortuna dusseldorf':2684,'dusseldorf':2684,
-  'fc heidenheim':2685,'heidenheim':2685,
-  'holstein kiel':11888,'kiel':11888,
-  'st. pauli':2684,'fc st. pauli':10789,
-  // 法甲
-  'paris saint-germain':1644,'psg':1644,'paris sg':1644,
-  'olympique marseille':1641,'marseille':1641,'om':1641,
-  'olympique lyonnais':1643,'lyon':1643,'ol':1643,
-  'as monaco':1659,'monaco':1659,
-  'rc lens':1645,'lens':1645,
-  'lille':1642,'losc lille':1642,
-  'nice':1646,'ogc nice':1646,
-  'rennes':1649,'stade rennais':1649,
-  'montpellier':1647,'montpellier hsc':1647,
-  'strasbourg':1650,'rc strasbourg':1650,
-  'nantes':1648,'fc nantes':1648,
-  'reims':1654,'stade de reims':1654,
-  'toulouse':1651,'toulouse fc':1651,
-  'brest':1652,'stade brestois':1652,
-  'angers':1653,'sco angers':1653,
-  'havre':1655,'le havre ac':1655,
-  'auxerre':1656,'aj auxerre':1656,
-  'saint-etienne':1657,'as saint-etienne':1657,
-  // 欧冠常客
-  'porto':2312,'fc porto':2312,
-  'benfica':2313,'sl benfica':2313,
-  'sporting cp':2314,'sporting lisbon':2314,
-  'ajax':674,'afc ajax':674,
-  'psv':674,'psv eindhoven':678,
-  'feyenoord':675,'feyenoord rotterdam':675,
-  'celtic':2616,'celtic fc':2616,
-  'rangers':2617,'rangers fc':2617,
-  'shakhtar donetsk':2108,'shakhtar':2108,
-  'red bull salzburg':2092,'rb salzburg':2092,
-  'benfica':2313,
-  'club brugge':2282,'fc brugge':2282,
-  'galatasaray':2084,'galatasaray sk':2084,
-  'fenerbahce':2085,'fenerbahçe':2085,
-  'besiktas':2086,
+// 球队简称 → AllSportsApi 正式名
+const TEAM_ALIASES = {
+  'palace':'Crystal Palace','crystal palace':'Crystal Palace',
+  'spurs':'Tottenham Hotspur','tottenham':'Tottenham Hotspur',
+  'man city':'Manchester City','mancity':'Manchester City',
+  'man utd':'Manchester United','man united':'Manchester United',
+  'wolves':'Wolverhampton Wanderers',
+  'west ham':'West Ham United',
+  'newcastle':'Newcastle United',
+  'nottm forest':'Nottingham Forest','forest':'Nottingham Forest',
+  'brighton':'Brighton & Hove Albion',
+  'leicester':'Leicester City',
+  'barca':'FC Barcelona','barcelona':'FC Barcelona',
+  'real madrid':'Real Madrid CF',
+  'atletico':'Club Atletico de Madrid','atletico madrid':'Club Atletico de Madrid',
+  'juve':'Juventus',
+  'inter':'FC Internazionale','inter milan':'FC Internazionale',
+  'milan':'AC Milan','ac milan':'AC Milan',
+  'roma':'AS Roma','napoli':'SSC Napoli','lazio':'SS Lazio',
+  'bayern':'Bayern Munich','fc bayern':'Bayern Munich',
+  'dortmund':'Borussia Dortmund','bvb':'Borussia Dortmund',
+  'leverkusen':'Bayer Leverkusen',
+  'psg':'Paris Saint-Germain','paris':'Paris Saint-Germain',
+  'marseille':'Olympique Marseille',
+  'lyon':'Olympique Lyonnais',
+  'monaco':'AS Monaco',
 };
 
-function lookupTeamId(name){
-  const key = name.toLowerCase().trim();
-  // 精确匹配
-  if(TEAM_IDS[key]) return {id:TEAM_IDS[key], name};
-  // 部分匹配
-  for(const [k,v] of Object.entries(TEAM_IDS)){
-    if(k.includes(key)||key.includes(k)) return {id:v, name};
-  }
-  return null;
+function normalizeTeamName(name){
+  return TEAM_ALIASES[name.toLowerCase().trim()] || name;
+}
+
+async function asaFetch(params, key){
+  const r = await fetch(`${ASA_BASE}/?${params}&APIkey=${key}`);
+  if(!r.ok) throw new Error(`HTTP ${r.status}`);
+  const d = await r.json();
+  if(d.success===0) throw new Error(d.message||'球队搜索失败');
+  return Array.isArray(d.result) ? d.result : [];
+}
+
+// TheSportsDB：搜索球队拿 teamId，再拿历史比赛
+async function tsdbFetch(path){
+  const r = await fetch(`${TSDB_BASE}${path}`);
+  if(!r.ok) throw new Error(`TheSportsDB HTTP ${r.status}`);
+  return r.json();
 }
 
 function saveFootballKey(){
@@ -1117,7 +1252,7 @@ function saveFootballKey(){
 function updateFootballKeyStatus(){
   const key=sessionStorage.getItem('football_key');
   const el=document.getElementById('soc_keyStatus');
-  if(!el)return;
+  if(!el) return;
   if(key){
     el.innerHTML='<span style="color:var(--accent)">✅ Key 已设置</span>';
     document.getElementById('soc_apiKey').value=key;
@@ -1126,21 +1261,9 @@ function updateFootballKeyStatus(){
   }
 }
 
-async function ssfetch(path, key){
-  const r = await fetch(SS_BASE+path,{
-    method: 'GET',
-    headers:{
-      'X-RapidAPI-Key': key,
-      'X-RapidAPI-Host': SS_HOST
-    }
-  });
-  if(!r.ok) throw new Error(`API错误 ${r.status}`);
-  return r.json();
-}
-
 async function fetchBothTeams(){
   const key = sessionStorage.getItem('football_key');
-  if(!key){alert('请先填入并保存 Key');return;}
+  if(!key){alert('请先填入并保存 AllSportsApi Key');return;}
 
   const nameA = document.getElementById('soc_fetchA').value.trim();
   const nameB = document.getElementById('soc_fetchB').value.trim();
@@ -1153,67 +1276,73 @@ async function fetchBothTeams(){
   st.style.display='block';
 
   try{
-    // ── Step 1: 本地查 teamId ──
-    const tA = lookupTeamId(nameA);
-    const tB = lookupTeamId(nameB);
+    // ── Step 1: AllSportsApi 搜索球队名 ──
+    st.innerHTML='<span style="color:var(--accent2)">🔄 搜索球队...</span>';
+    const searchA = normalizeTeamName(nameA);
+    const searchB = normalizeTeamName(nameB);
 
-    if(!tA){
-      throw new Error(`找不到球队「${nameA}」— 请用英文全名，如 Arsenal / Barcelona / Bayern Munich`);
+    const [srA, srB] = await Promise.all([
+      asaFetch(`met=Teams&teamName=${encodeURIComponent(searchA)}`, key),
+      asaFetch(`met=Teams&teamName=${encodeURIComponent(searchB)}`, key)
+    ]);
+
+    if(!srA.length) throw new Error(`找不到球队「${searchA}」`);
+    if(!srB.length) throw new Error(`找不到球队「${searchB}」`);
+
+    const fullNameA = srA[0].team_name;
+    const fullNameB = srB[0].team_name;
+
+    // ── Step 2: TheSportsDB 搜索 teamId（无需Key）──
+    st.innerHTML=`<span style="color:var(--accent2)">🔄 获取 ${fullNameA} & ${fullNameB} 历史比赛...</span>`;
+
+    const [tdA, tdB] = await Promise.all([
+      tsdbFetch(`/searchteams.php?t=${encodeURIComponent(fullNameA)}`),
+      tsdbFetch(`/searchteams.php?t=${encodeURIComponent(fullNameB)}`)
+    ]);
+
+    const tsdbIdA = tdA?.teams?.[0]?.idTeam;
+    const tsdbIdB = tdB?.teams?.[0]?.idTeam;
+
+    // ── Step 3: TheSportsDB 拿近期比赛（eventslast）──
+    let eventsA=[], eventsB=[];
+    if(tsdbIdA){
+      const resA = await tsdbFetch(`/eventslast.php?id=${tsdbIdA}`);
+      eventsA = resA?.results || [];
     }
-    if(!tB){
-      throw new Error(`找不到球队「${nameB}」— 请用英文全名，如 Chelsea / Real Madrid / PSG`);
+    await new Promise(r=>setTimeout(r,300));
+    if(tsdbIdB){
+      const resB = await tsdbFetch(`/eventslast.php?id=${tsdbIdB}`);
+      eventsB = resB?.results || [];
     }
 
-    st.innerHTML=`<span style="color:var(--accent2)">🔄 获取 ${nameA}（ID:${tA.id}）数据...</span>`;
-
-    // ── Step 2: 顺序请求，间隔1秒，避免触发频率限制 ──
-    const fixA = await ssfetch(`/teams/get-last-matches?teamId=${tA.id}&pageIndex=0`, key);
-    await new Promise(r=>setTimeout(r, 1200)); // 等1.2秒再请求第二支
-    st.innerHTML=`<span style="color:var(--accent2)">🔄 获取 ${nameB}（ID:${tB.id}）数据...</span>`;
-    const fixB = await ssfetch(`/teams/get-last-matches?teamId=${tB.id}&pageIndex=0`, key);
-
-    // ── 解析近10场胜场 ──
-    function countWins(data, teamId){
-      const events = data?.events || [];
-      let wins=0, played=0;
-      for(const e of events){
-        if(played>=10) break;
-        const isHome = e.homeTeam?.id===teamId;
-        const hs = e.homeScore?.current;
-        const as = e.awayScore?.current;
-        if(hs==null||as==null) continue;
-        played++;
-        if(isHome && hs>as) wins++;
-        else if(!isHome && as>hs) wins++;
-      }
-      return wins;
-    }
-
-    // ── 计算场均进球/失球（近10场，代替xG）──
-    function calcAvg(data, teamId){
-      const events = data?.events || [];
-      let gf=0, ga=0, n=0;
-      for(const e of events){
-        if(n>=10) break;
-        const isHome = e.homeTeam?.id===teamId;
-        const hs = e.homeScore?.current;
-        const as = e.awayScore?.current;
-        if(hs==null||as==null) continue;
+    // ── 解析比赛结果 ──
+    function parseEvents(events, teamName){
+      if(!events.length) return {wins:0, gf:0, ga:0, n:0};
+      let wins=0, gf=0, ga=0, n=0;
+      events.slice(0,10).forEach(e=>{
+        const hg = parseInt(e.intHomeScore);
+        const ag = parseInt(e.intAwayScore);
+        if(isNaN(hg)||isNaN(ag)) return;
+        const isHome = e.strHomeTeam===teamName;
         n++;
-        gf += isHome ? hs : as;
-        ga += isHome ? as : hs;
-      }
-      if(n===0) return {xg:1.2, xga:1.0, n:0};
-      return {xg:+(gf/n).toFixed(2), xga:+(ga/n).toFixed(2), n};
+        gf += isHome ? hg : ag;
+        ga += isHome ? ag : hg;
+        if(isHome && hg>ag) wins++;
+        else if(!isHome && ag>hg) wins++;
+      });
+      return {wins, gf, ga, n};
     }
 
-    const l10A = countWins(fixA, tA.id);
-    const l10B = countWins(fixB, tB.id);
-    const xA   = calcAvg(fixA, tA.id);
-    const xB   = calcAvg(fixB, tB.id);
+    const rA = parseEvents(eventsA, fullNameA);
+    const rB = parseEvents(eventsB, fullNameB);
+
+    const xgA  = rA.n>0 ? +(rA.gf/rA.n).toFixed(2) : 1.2;
+    const xgaA = rA.n>0 ? +(rA.ga/rA.n).toFixed(2) : 1.0;
+    const xgB  = rB.n>0 ? +(rB.gf/rB.n).toFixed(2) : 1.2;
+    const xgaB = rB.n>0 ? +(rB.ga/rB.n).toFixed(2) : 1.0;
 
     // ── 填入表单 ──
-    function setF(id, v){
+    function setF(id,v){
       const el=document.getElementById(id);
       if(!el||v===undefined||v==='') return;
       el.value=v;
@@ -1222,42 +1351,34 @@ async function fetchBothTeams(){
       setTimeout(()=>{el.style.boxShadow='';el.style.borderColor='';},2500);
     }
 
-    setF('soc_teamA', nameA);
-    setF('soc_xgA',   xA.xg);
-    setF('soc_xgaA',  xA.xga);
-    setF('soc_l10A',  l10A);
+    setF('soc_teamA', fullNameA);
+    setF('soc_xgA',   xgA);
+    setF('soc_xgaA',  xgaA);
+    setF('soc_l10A',  rA.wins);
+    setF('soc_teamB', fullNameB);
+    setF('soc_xgB',   xgB);
+    setF('soc_xgaB',  xgaB);
+    setF('soc_l10B',  rB.wins);
 
-    setF('soc_teamB', nameB);
-    setF('soc_xgB',   xB.xg);
-    setF('soc_xgaB',  xB.xga);
-    setF('soc_l10B',  l10B);
+    document.getElementById('soc_injListA').innerHTML='⚠️ 伤病请查 Transfermarkt.com';
+    document.getElementById('soc_injListB').innerHTML='⚠️ 伤病请查 Transfermarkt.com';
 
-    // 伤病需要额外端点，暂无权限，提示手动填
-    document.getElementById('soc_injListA').innerHTML='⚠️ 伤病数据请从 Transfermarkt 手动查询';
-    document.getElementById('soc_injListB').innerHTML='⚠️ 伤病数据请从 Transfermarkt 手动查询';
+    const noteA = rA.n>0 ? `近${rA.n}场 ${rA.wins}胜` : '历史数据不足，请手动填近10场';
+    const noteB = rB.n>0 ? `近${rB.n}场 ${rB.wins}胜` : '历史数据不足，请手动填近10场';
 
     st.innerHTML=`
-      <span style="color:var(--accent)">✅ 近期数据已填入！</span>
+      <span style="color:var(--accent)">✅ 数据已填入！</span>
       <span style="color:var(--text2);margin-left:10px">
-        ${nameA}：场均进${xA.xg} 失${xA.xga}，近${xA.n}场 ${l10A}胜 ·
-        ${nameB}：场均进${xB.xg} 失${xB.xga}，近${xB.n}场 ${l10B}胜
+        ${fullNameA}：xG ${xgA} / xGA ${xgaA}，${noteA} ·
+        ${fullNameB}：xG ${xgB} / xGA ${xgaB}，${noteB}
       </span>
-      <div style="color:var(--text2);font-size:11px;margin-top:6px">
-        ⚠️ xG 为近10场实际进球均值（可手动调整）· 伤病数据请查 Transfermarkt.com
+      <div style="font-size:11px;color:var(--text2);margin-top:4px">
+        xG 为实际进球均值近似 · 伤病请查 Transfermarkt.com
       </div>`;
 
   }catch(e){
-    const is429 = e.message.includes('429');
-    const isNotFound = e.message.includes('找不到球队');
-    st.innerHTML=`
-      <span style="color:var(--accent3)">⚠️ ${e.message}</span>
-      ${is429 ? `<div style="color:var(--accent4);font-size:12px;margin-top:8px">
-        📋 免费版频率限制：等待 1–2 分钟后重试，或明天配额重置后再用
-      </div>` : ''}
-      ${isNotFound ? `<div style="color:var(--text2);font-size:11px;margin-top:8px">
-        支持示例：Arsenal · Chelsea · Liverpool · Real Madrid · Barcelona ·
-        Bayern Munich · PSG · Juventus · Inter Milan · Dortmund 等约100支
-      </div>` : ''}`;
+    st.innerHTML=`<span style="color:var(--accent3)">⚠️ ${e.message}</span>`;
+    console.error(e);
   }
   btn.disabled=false; spin.style.display='none';
 }
