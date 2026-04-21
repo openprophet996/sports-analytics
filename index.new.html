@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ProEdge Analytics — 预测市场智能分析</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #050810;
+  --bg2: #0a0f1e;
+  --bg3: #0f1628;
+  --accent: #00f5a0;
+  --accent2: #00d4ff;
+  --accent3: #ff3c6e;
+  --accent4: #ffd700;
+  --text: #e8edf5;
+  --text2: #8892a4;
+  --border: rgba(0,245,160,0.15);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Space Grotesk', sans-serif;
+  overflow-x: hidden;
+}
+body::before {
+  content:'';
+  position:fixed; inset:0;
+  background-image:
+    linear-gradient(rgba(0,245,160,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,245,160,0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+  pointer-events:none; z-index:0;
+}
+.orb { position:fixed; border-radius:50%; filter:blur(120px); pointer-events:none; z-index:0; }
+.orb1 { width:700px; height:700px; background:rgba(0,245,160,0.06); top:-250px; right:-150px; }
+.orb2 { width:500px; height:500px; background:rgba(0,212,255,0.05); bottom:-200px; left:-100px; }
+.orb3 { width:400px; height:400px; background:rgba(255,60,110,0.03); top:50%; left:40%; transform:translate(-50%,-50%); }
+
+nav {
+  position:fixed; top:0; left:0; right:0; z-index:100;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:18px 60px;
+  background: rgba(5,8,16,0.85);
+  backdrop-filter: blur(24px);
+  border-bottom: 1px solid rgba(0,245,160,0.08);
+}
+.nav-logo { display:flex; align-items:center; gap:12px; }
+.logo-mark {
+  width:42px; height:42px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius:11px;
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Bebas Neue'; font-size:20px; color:#050810;
+  box-shadow:0 0 20px rgba(0,245,160,0.25);
+}
+.logo-text { font-family:'Bebas Neue'; font-size:22px; letter-spacing:2px; color:var(--text); }
+.logo-text span { color:var(--accent); }
+.nav-right { display:flex; align-items:center; gap:16px; }
+.nav-badge {
+  font-family:'Space Mono'; font-size:11px; color:var(--accent2);
+  background:rgba(0,212,255,0.08); border:1px solid rgba(0,212,255,0.2);
+  border-radius:6px; padding:4px 12px; letter-spacing:1px;
+}
+.nav-cta {
+  background: var(--accent); color: #050810;
+  border:none; padding:10px 24px; border-radius:9px;
+  font-family:'Space Grotesk'; font-weight:700; font-size:14px;
+  cursor:pointer; text-decoration:none; transition:all .2s; letter-spacing:0.5px;
+  display:inline-flex; align-items:center; gap:8px;
+}
+.nav-cta:hover { background:var(--accent2); transform:translateY(-1px); box-shadow:0 6px 20px rgba(0,245,160,0.2); }
+
+/* HERO */
+.hero {
+  position:relative; z-index:1;
+  min-height:100vh; display:flex; align-items:center;
+  padding:130px 60px 80px; max-width:1200px; margin:0 auto;
+}
+.hero-content { max-width:680px; }
+.hero-badge {
+  display:inline-flex; align-items:center; gap:8px;
+  background:rgba(0,245,160,0.08); border:1px solid rgba(0,245,160,0.25);
+  border-radius:100px; padding:7px 18px;
+  font-size:11px; color:var(--accent); letter-spacing:2.5px;
+  text-transform:uppercase; margin-bottom:28px; font-family:'Space Mono';
+}
+.hero-badge::before {
+  content:''; width:6px; height:6px; background:var(--accent);
+  border-radius:50%; animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(1.4)} }
+.hero-title {
+  font-family:'Bebas Neue';
+  font-size:clamp(60px,7.5vw,104px);
+  line-height:0.92; letter-spacing:2px; margin-bottom:24px;
+}
+.hero-title .line1 { color:var(--text); display:block; }
+.hero-title .line2 { color:var(--accent); display:block; }
+.hero-title .line3 { color:var(--text2); display:block; font-size:0.55em; letter-spacing:5px; margin-top:12px; }
+.hero-desc {
+  font-size:17px; color:var(--text2); line-height:1.75;
+  margin-bottom:40px; max-width:540px;
+}
+.hero-desc strong { color:var(--text); font-weight:600; }
+.hero-actions { display:flex; gap:14px; flex-wrap:wrap; margin-bottom:56px; }
+.btn-primary {
+  background: var(--accent); color: #050810;
+  border:none; padding:15px 34px; border-radius:10px;
+  font-family:'Space Grotesk'; font-weight:700; font-size:15px;
+  cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:10px;
+  transition:all .25s; letter-spacing:0.3px;
+}
+.btn-primary:hover { background:var(--accent2); transform:translateY(-2px); box-shadow:0 10px 32px rgba(0,245,160,0.2); }
+.btn-secondary {
+  background: transparent; color: var(--text);
+  border: 1px solid rgba(255,255,255,0.12);
+  padding:15px 34px; border-radius:10px;
+  font-family:'Space Grotesk'; font-weight:600; font-size:15px;
+  cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:10px;
+  transition:all .25s;
+}
+.btn-secondary:hover { border-color:var(--accent); color:var(--accent); transform:translateY(-2px); }
+.hero-stats { display:flex; gap:40px; flex-wrap:wrap; }
+.stat { display:flex; flex-direction:column; gap:4px; }
+.stat-value { font-family:'Bebas Neue'; font-size:40px; color:var(--accent); letter-spacing:1px; line-height:1; }
+.stat-label { font-size:11px; color:var(--text2); text-transform:uppercase; letter-spacing:2px; }
+
+/* SPORTS STRIP */
+.sports-strip {
+  position:relative; z-index:1;
+  background:var(--bg2);
+  border-top:1px solid rgba(255,255,255,0.04);
+  border-bottom:1px solid rgba(255,255,255,0.04);
+  padding:20px 60px;
+  display:flex; align-items:center; gap:12px;
+  overflow-x:auto;
+}
+.sports-label { font-family:'Space Mono'; font-size:10px; color:var(--text2); letter-spacing:2px; white-space:nowrap; margin-right:8px; }
+.sport-pill {
+  background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
+  border-radius:99px; padding:6px 16px;
+  font-size:13px; font-weight:500; white-space:nowrap;
+  display:flex; align-items:center; gap:6px;
+}
+.sport-pill.active { background:rgba(0,245,160,0.08); border-color:rgba(0,245,160,0.2); color:var(--accent); }
+
+/* FEATURES */
+.features { position:relative; z-index:1; padding:100px 60px; max-width:1200px; margin:0 auto; }
+.section-label { font-family:'Space Mono'; font-size:11px; color:var(--accent); letter-spacing:3px; text-transform:uppercase; margin-bottom:14px; }
+.section-title { font-family:'Bebas Neue'; font-size:clamp(42px,5vw,68px); letter-spacing:2px; margin-bottom:56px; line-height:1; }
+.features-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
+.feature-card {
+  background: var(--bg2); border: 1px solid rgba(255,255,255,0.05);
+  border-radius:16px; padding:30px; transition:all .3s;
+  position:relative; overflow:hidden;
+}
+.feature-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background:linear-gradient(90deg, transparent, var(--accent), transparent);
+  opacity:0; transition:.3s;
+}
+.feature-card:hover { border-color:rgba(0,245,160,0.18); transform:translateY(-4px); box-shadow:0 12px 40px rgba(0,0,0,0.3); }
+.feature-card:hover::before { opacity:1; }
+.feature-icon { font-size:28px; margin-bottom:14px; }
+.feature-title { font-size:17px; font-weight:700; margin-bottom:10px; }
+.feature-desc { font-size:13px; color:var(--text2); line-height:1.7; }
+.feature-tag {
+  display:inline-block; margin-top:14px; font-size:11px;
+  font-family:'Space Mono'; color:var(--accent);
+  background:rgba(0,245,160,0.08); border-radius:4px; padding:3px 8px;
+}
+
+/* MODEL FLOW */
+.model-section { position:relative; z-index:1; padding:100px 60px; background:var(--bg2); border-top:1px solid rgba(255,255,255,0.04); border-bottom:1px solid rgba(255,255,255,0.04); }
+.model-inner { max-width:1200px; margin:0 auto; }
+.model-flow { display:grid; grid-template-columns:repeat(5,1fr); gap:0; margin-top:60px; align-items:center; }
+.model-step {
+  text-align:center; padding:0 16px; position:relative;
+}
+.model-step:not(:last-child)::after {
+  content:'→';
+  position:absolute; right:-8px; top:50%; transform:translateY(-50%);
+  color:rgba(0,245,160,0.3); font-size:20px;
+}
+.model-icon {
+  width:60px; height:60px; border-radius:14px;
+  background:var(--bg3); border:1px solid rgba(0,245,160,0.2);
+  display:flex; align-items:center; justify-content:center;
+  font-size:24px; margin:0 auto 14px;
+}
+.model-label { font-weight:700; font-size:14px; margin-bottom:6px; }
+.model-desc { font-size:12px; color:var(--text2); line-height:1.5; }
+
+/* HOW IT WORKS */
+.howto { position:relative; z-index:1; padding:100px 60px; max-width:1200px; margin:0 auto; }
+.steps { display:grid; grid-template-columns:repeat(4,1fr); gap:0; margin-top:56px; position:relative; }
+.steps::before {
+  content:''; position:absolute; top:32px; left:12%; right:12%; height:1px;
+  background:linear-gradient(90deg, transparent, rgba(0,245,160,0.3), transparent);
+}
+.step { padding:0 20px; text-align:center; }
+.step-num {
+  width:64px; height:64px; border-radius:50%;
+  background:var(--bg2); border:1px solid rgba(0,245,160,0.25);
+  display:flex; align-items:center; justify-content:center;
+  margin:0 auto 18px;
+  font-family:'Bebas Neue'; font-size:26px; color:var(--accent); position:relative; z-index:1;
+}
+.step-title { font-weight:700; font-size:15px; margin-bottom:8px; }
+.step-desc { font-size:13px; color:var(--text2); line-height:1.6; }
+
+/* CTA */
+.cta-section { position:relative; z-index:1; padding:100px 60px; max-width:1200px; margin:0 auto; text-align:center; }
+.cta-box {
+  background: var(--bg2); border:1px solid rgba(0,245,160,0.18);
+  border-radius:24px; padding:80px 60px; position:relative; overflow:hidden;
+}
+.cta-box::before {
+  content:''; position:absolute; inset:0;
+  background:radial-gradient(ellipse at 50% 0%, rgba(0,245,160,0.07), transparent 55%);
+  pointer-events:none;
+}
+.cta-title { font-family:'Bebas Neue'; font-size:clamp(42px,5.5vw,76px); letter-spacing:2px; margin-bottom:16px; }
+.cta-title span { color:var(--accent); }
+.cta-desc { font-size:17px; color:var(--text2); margin-bottom:48px; max-width:540px; margin-left:auto; margin-right:auto; line-height:1.75; }
+.referral-box {
+  background:var(--bg3); border:1px solid rgba(0,245,160,0.2);
+  border-radius:12px; padding:18px 24px;
+  display:inline-flex; align-items:center; gap:14px;
+  margin-bottom:36px; max-width:100%;
+}
+.referral-label { font-size:10px; font-family:'Space Mono'; color:var(--text2); text-transform:uppercase; letter-spacing:1.5px; white-space:nowrap; }
+.referral-link { font-family:'Space Mono'; font-size:12px; color:var(--accent); word-break:break-all; }
+.copy-btn {
+  background:rgba(0,245,160,0.08); border:1px solid rgba(0,245,160,0.25);
+  border-radius:6px; padding:6px 14px; color:var(--accent);
+  font-size:12px; cursor:pointer; white-space:nowrap; transition:.2s; font-family:'Space Mono';
+}
+.copy-btn:hover { background:rgba(0,245,160,0.18); }
+
+/* FORM */
+.form-section { position:relative; z-index:1; padding:0 60px 120px; max-width:800px; margin:0 auto; }
+.form-card {
+  background:var(--bg2); border:1px solid rgba(255,255,255,0.07);
+  border-radius:20px; padding:48px;
+}
+.form-title { font-family:'Bebas Neue'; font-size:38px; letter-spacing:2px; margin-bottom:8px; color:var(--accent); }
+.form-sub { font-size:14px; color:var(--text2); margin-bottom:32px; line-height:1.65; }
+.form-group { margin-bottom:20px; }
+.form-label { display:block; font-size:11px; font-family:'Space Mono'; color:var(--text2); letter-spacing:1.5px; text-transform:uppercase; margin-bottom:8px; }
+.form-input {
+  width:100%; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
+  border-radius:10px; padding:13px 16px; color:var(--text);
+  font-family:'Space Grotesk'; font-size:15px; outline:none; transition:.2s;
+}
+.form-input:focus { border-color:var(--accent); background:rgba(0,245,160,0.03); box-shadow:0 0 0 3px rgba(0,245,160,0.08); }
+.form-input::placeholder { color:var(--text2); opacity:.5; }
+.form-hint { font-size:12px; color:var(--text2); margin-top:6px; line-height:1.5; }
+.submit-btn {
+  width:100%; background:var(--accent); color:#050810;
+  border:none; padding:16px; border-radius:10px;
+  font-family:'Space Grotesk'; font-weight:700; font-size:16px;
+  cursor:pointer; margin-top:8px; transition:.2s; letter-spacing:0.3px;
+}
+.submit-btn:hover { background:var(--accent2); box-shadow:0 8px 24px rgba(0,245,160,0.2); }
+.form-success { display:none; text-align:center; padding:40px 0; }
+.success-icon { font-size:52px; margin-bottom:16px; }
+.success-title { font-family:'Bebas Neue'; font-size:34px; color:var(--accent); letter-spacing:2px; margin-bottom:10px; }
+.success-desc { font-size:14px; color:var(--text2); line-height:1.8; }
+
+footer {
+  position:relative; z-index:1; text-align:center;
+  padding:36px 60px; border-top:1px solid rgba(255,255,255,0.04);
+  font-size:13px; color:var(--text2);
+}
+footer a { color:var(--accent); text-decoration:none; }
+footer a:hover { color:var(--accent2); }
+
+@keyframes fadeUp { from{opacity:0;transform:translateY(28px)} to{opacity:1;transform:translateY(0)} }
+.hero-content > * { animation: fadeUp .7s ease both; }
+.hero-badge{animation-delay:.1s}.hero-title{animation-delay:.2s}
+.hero-desc{animation-delay:.3s}.hero-actions{animation-delay:.4s}.hero-stats{animation-delay:.5s}
+
+@media(max-width:900px){
+  nav{padding:14px 24px;} .nav-badge{display:none;}
+  .hero{padding:100px 24px 60px;} .features{padding:60px 24px;}
+  .features-grid{grid-template-columns:1fr 1fr;} .model-section{padding:60px 24px;}
+  .model-flow{grid-template-columns:1fr 1fr;gap:24px;}
+  .model-step::after{display:none;} .howto{padding:60px 24px;}
+  .steps{grid-template-columns:1fr 1fr;gap:40px;}.steps::before{display:none;}
+  .cta-section{padding:60px 24px;}.cta-box{padding:48px 28px;}
+  .form-section{padding:0 24px 80px;}.form-card{padding:32px 24px;}
+  footer{padding:28px 24px;} .sports-strip{padding:16px 24px;}
+}
+@media(max-width:600px){
+  .features-grid{grid-template-columns:1fr;}
+  .hero-stats{gap:24px;} .stat-value{font-size:32px;}
+}
+</style>
+</head>
+<body>
+
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="orb orb3"></div>
+
+<nav>
+  <div class="nav-logo">
+    <div class="logo-mark">PE</div>
+    <div class="logo-text">ProEdge <span>Analytics</span></div>
+  </div>
+  <div class="nav-right">
+    <a href="./app.html" style="font-size:13px;color:var(--text2);text-decoration:none;font-family:'Space Mono';letter-spacing:0.5px;padding:8px 14px;border:1px solid rgba(255,255,255,0.08);border-radius:8px;transition:.2s" onmouseover="this.style.color='var(--accent)';this.style.borderColor='rgba(0,245,160,0.2)'" onmouseout="this.style.color='var(--text2)';this.style.borderColor='rgba(255,255,255,0.08)'">已有访问码 →</a>
+    <span class="nav-badge">5项运动 · 实时分析</span>
+    <a href="#register" class="nav-cta">获取访问权限 →</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-content">
+    <div class="hero-badge">预测市场 · 量化分析工具</div>
+    <h1 class="hero-title">
+      <span class="line1">SMARTER</span>
+      <span class="line2">BETS.</span>
+      <span class="line3">数据驱动的下注决策</span>
+    </h1>
+    <p class="hero-desc">
+      专为 <strong>Polymarket</strong> 设计的深度概率分析平台。
+      泊松分布、蒙特卡洛模拟、贝叶斯修正、凯利公式——
+      把情绪变成数字，把直觉变成长期优势。
+    </p>
+    <div class="hero-actions">
+      <a href="#register" class="btn-primary">🚀 免费获取访问权限</a>
+      <a href="#features" class="btn-secondary">了解功能 ↓</a>
+    </div>
+    <div class="hero-stats">
+      <div class="stat"><span class="stat-value">5</span><span class="stat-label">运动模块</span></div>
+      <div class="stat"><span class="stat-value">48</span><span class="stat-label">世界杯球队</span></div>
+      <div class="stat"><span class="stat-value">200+</span><span class="stat-label">球员数据库</span></div>
+      <div class="stat"><span class="stat-value">实时</span><span class="stat-label">赔率同步</span></div>
+    </div>
+  </div>
+</section>
+
+<div class="sports-strip">
+  <span class="sports-label">覆盖运动</span>
+  <div class="sport-pill active">⚽ 足球</div>
+  <div class="sport-pill active">🏀 NBA</div>
+  <div class="sport-pill active">🌍 世界杯</div>
+  <div class="sport-pill active">🎾 Tennis</div>
+  <div class="sport-pill active">🏒 NHL</div>
+  <div class="sport-pill" style="opacity:.5">⚾ Baseball <span style="font-size:10px;color:var(--accent4)">即将</span></div>
+  <div class="sport-pill" style="opacity:.5">🏏 Cricket <span style="font-size:10px;color:var(--accent4)">即将</span></div>
+</div>
+
+<section class="features" id="features">
+  <div class="section-label">核心功能</div>
+  <h2 class="section-title">专业级分析<br>人人可用</h2>
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">⚽</div>
+      <div class="feature-title">足球深度分析</div>
+      <div class="feature-desc">泊松矩阵(0-9)，xG/xGA贝叶斯修正，200+球员伤病影响力数据库，H2H历史对阵，Polymarket赔率一键填入。</div>
+      <span class="feature-tag">五大联赛 + 欧冠</span>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🏀</div>
+      <div class="feature-title">NBA 蒙特卡洛模拟</div>
+      <div class="feature-desc">Box-Muller正态分布，Cholesky相关性修正，20,000次模拟，动态主客场优势，球员影响力精算。</div>
+      <span class="feature-tag">20,000次/分析</span>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🌍</div>
+      <div class="feature-title">2026 世界杯专区</div>
+      <div class="feature-desc">全部48支参赛队完整数据，FIFA排名加权，国家队球员影响力数据库，快速选队一键填入。</div>
+      <span class="feature-tag">2026 FIFA WC · 48队</span>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🎾</div>
+      <div class="feature-title">Tennis 马尔可夫链</div>
+      <div class="feature-desc">逐分逐局逐盘精算，发球局胜率 × 接发破发率，Elo评分调整，支持 BO3/BO5 及抢七规则。</div>
+      <span class="feature-tag">ATP · WTA · Grand Slam</span>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🏒</div>
+      <div class="feature-title">NHL 泊松模型</div>
+      <div class="feature-desc">Corsi% xG修正，守门员扑救率调整，60分钟结果 + 延时赛/点球大战概率，最可能比分Top5。</div>
+      <span class="feature-tag">含 OT/SO 概率</span>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📐</div>
+      <div class="feature-title">凯利公式 + EV</div>
+      <div class="feature-desc">自动识别正期望值洼池，精确计算最优下注比例，多注并行资金分配，半凯利风险控制。</div>
+      <span class="feature-tag">长期稳定获利</span>
+    </div>
+  </div>
+</section>
+
+<!-- MODEL FLOW -->
+<section class="model-section">
+  <div class="model-inner">
+    <div class="section-label">分析逻辑</div>
+    <h2 class="section-title">从数据到决策<br>5步完成</h2>
+    <div class="model-flow">
+      <div class="model-step">
+        <div class="model-icon">📊</div>
+        <div class="model-label">数据输入</div>
+        <div class="model-desc">球员伤病、近期战绩、xG数据、H2H对阵</div>
+      </div>
+      <div class="model-step">
+        <div class="model-icon">🔬</div>
+        <div class="model-label">贝叶斯修正</div>
+        <div class="model-desc">融合历史先验与最新信息，动态调整概率</div>
+      </div>
+      <div class="model-step">
+        <div class="model-icon">🎲</div>
+        <div class="model-label">概率模拟</div>
+        <div class="model-desc">泊松/蒙特卡洛/马尔可夫，20-30k次模拟</div>
+      </div>
+      <div class="model-step">
+        <div class="model-icon">🎯</div>
+        <div class="model-label">洼池识别</div>
+        <div class="model-desc">对比Polymarket赔率，找出正期望值机会</div>
+      </div>
+      <div class="model-step">
+        <div class="model-icon">💰</div>
+        <div class="model-label">凯利执行</div>
+        <div class="model-desc">f*=(b×p-q)/b，最优本金分配，复利增长</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="howto" id="howto">
+  <div class="section-label">使用流程</div>
+  <h2 class="section-title">4步开始<br>量化下注</h2>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">01</div>
+      <div class="step-title">通过邀请链接注册</div>
+      <div class="step-desc">点击专属链接在 Polymarket 注册账户并存入 $20 激活钱包</div>
+    </div>
+    <div class="step">
+      <div class="step-num">02</div>
+      <div class="step-title">提交注册信息</div>
+      <div class="step-desc">填写你的 Polymarket 用户名和联系方式，提交申请</div>
+    </div>
+    <div class="step">
+      <div class="step-num">03</div>
+      <div class="step-title">获取专属访问码</div>
+      <div class="step-desc">24小时内审核通过，收到访问码即可登录使用</div>
+    </div>
+    <div class="step">
+      <div class="step-num">04</div>
+      <div class="step-title">数据驱动下注</div>
+      <div class="step-desc">自动拉取赔率，模型计算概率，凯利公式决定金额</div>
+    </div>
+  </div>
+</section>
+
+<section class="cta-section">
+  <div class="cta-box">
+    <h2 class="cta-title">准备好了吗？<br><span>免费开始使用</span></h2>
+    <p class="cta-desc">通过专属邀请链接注册 Polymarket，完成验证后即可免费使用 ProEdge Analytics 全部 5 项运动分析功能。</p>
+    <div class="referral-box">
+      <div>
+        <div class="referral-label">专属邀请链接</div>
+        <div class="referral-link">https://polymarket.com/?r=1773731088415openprophet</div>
+      </div>
+      <button class="copy-btn" onclick="copyLink()">复制</button>
+    </div>
+    <br>
+    <a href="https://polymarket.com/?r=1773731088415openprophet" target="_blank" class="btn-primary" style="display:inline-flex;margin-bottom:16px">
+      🚀 前往注册 Polymarket →
+    </a>
+    <p style="font-size:13px;color:var(--text2)">注册完成后，在下方填写用户名申请访问权限</p>
+  </div>
+</section>
+
+<section class="form-section" id="register">
+  <div class="form-card">
+    <div id="formContent">
+      <div class="form-title">申请访问权限</div>
+      <p class="form-sub">已通过邀请链接注册并存入 $20？填写以下信息，24小时内获得专属访问码。</p>
+      <div class="form-group">
+        <label class="form-label">Polymarket 用户名</label>
+        <input type="text" class="form-input" id="pmUsername" placeholder="你的 Polymarket 用户名">
+        <p class="form-hint">登录 Polymarket 后右上角显示的用户名</p>
+      </div>
+      <div class="form-group">
+        <label class="form-label">联系方式（Telegram / WhatsApp / Email）</label>
+        <input type="text" class="form-input" id="contact" placeholder="@yourtelegram 或 email@example.com">
+        <p class="form-hint">用于发送访问码，不会用于其他用途</p>
+      </div>
+      <div class="form-group">
+        <label class="form-label">主要分析哪类市场？</label>
+        <select class="form-input" id="market">
+          <option value="">请选择...</option>
+          <option value="football">⚽ 足球（EPL / 欧冠 / 世界杯）</option>
+          <option value="nba">🏀 NBA 篮球</option>
+          <option value="worldcup">🌍 2026 世界杯</option>
+          <option value="tennis">🎾 Tennis</option>
+          <option value="nhl">🏒 NHL 冰球</option>
+          <option value="all">全部运动</option>
+        </select>
+      </div>
+      <button class="submit-btn" onclick="submitForm()">提交申请 →</button>
+      <p style="font-size:12px;color:var(--text2);margin-top:16px;text-align:center">
+        ✅ 需通过邀请链接注册 · 通常24小时内回复
+      </p>
+    </div>
+    <div class="form-success" id="formSuccess">
+      <div class="success-icon">✅</div>
+      <div class="success-title">申请已提交！</div>
+      <p class="success-desc">
+        我们会在 <strong style="color:var(--accent)">24小时内</strong> 通过你提供的联系方式发送访问码。<br><br>
+        如有问题请联系：<a href="https://t.me/openprophet996" style="color:var(--accent)">@openprophet996</a>
+      </p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>© 2026 ProEdge Analytics · 数据分析工具，不构成投资建议 ·
+  <a href="./app.html" target="_blank">进入分析平台 →</a></p>
+</footer>
+
+<script>
+function copyLink(){
+  navigator.clipboard.writeText('https://polymarket.com/?r=1773731088415openprophet');
+  const btn=document.querySelector('.copy-btn');
+  btn.textContent='已复制 ✓'; btn.style.background='rgba(0,245,160,0.25)';
+  setTimeout(()=>{btn.textContent='复制';btn.style.background='';},2000);
+}
+async function submitForm(){
+  const username=document.getElementById('pmUsername').value.trim();
+  const contact=document.getElementById('contact').value.trim();
+  const market=document.getElementById('market').value;
+  if(!username){alert('请填写 Polymarket 用户名');return;}
+  if(!contact){alert('请填写联系方式');return;}
+  if(!market){alert('请选择分析市场');return;}
+  const btn=document.querySelector('.submit-btn');
+  btn.textContent='提交中...'; btn.disabled=true;
+  try{
+    await fetch('https://snowy-frog-09b0.winnertay4400.workers.dev/register',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({username,contact,market,timestamp:new Date().toISOString(),source:'landing-page'})
+    });
+  }catch(e){}
+  document.getElementById('formContent').style.display='none';
+  document.getElementById('formSuccess').style.display='block';
+}
+document.querySelectorAll('a[href^="#"]').forEach(a=>{
+  a.addEventListener('click',e=>{
+    e.preventDefault();
+    document.querySelector(a.getAttribute('href'))?.scrollIntoView({behavior:'smooth'});
+  });
+});
+</script>
+</body>
+</html>
