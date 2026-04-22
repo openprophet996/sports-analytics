@@ -3031,9 +3031,18 @@ PM_TAGS['tennis'] = 'tennis';
 // H2H 历史对阵
 // ═══════════════════════════════════════════
 async function fetchH2H(){
-  const teamA = document.getElementById('soc_teamA').value.trim();
-  const teamB = document.getElementById('soc_teamB').value.trim();
+  // 优先用球队名称字段，其次用搜索输入框
+  const teamA = document.getElementById('soc_teamA').value.trim() ||
+                document.getElementById('soc_fetchA').value.trim();
+  const teamB = document.getElementById('soc_teamB').value.trim() ||
+                document.getElementById('soc_fetchB').value.trim();
   if(!teamA||!teamB){ alert('请先填入双方球队名称'); return; }
+
+  // 用 lookupSocTeam 拿到标准名称
+  const dataA = lookupSocTeam(teamA);
+  const dataB = lookupSocTeam(teamB);
+  const searchA = dataA?.full || teamA;
+  const searchB = dataB?.full || teamB;
 
   const spinner = document.getElementById('soc_h2hSpinner');
   const result  = document.getElementById('soc_h2hResult');
@@ -3042,8 +3051,8 @@ async function fetchH2H(){
 
   try{
     const [tdA, tdB] = await Promise.all([
-      tsdbFetch(`/searchteams.php?t=${encodeURIComponent(teamA)}`),
-      tsdbFetch(`/searchteams.php?t=${encodeURIComponent(teamB)}`)
+      tsdbFetch(`/searchteams.php?t=${encodeURIComponent(searchA)}`),
+      tsdbFetch(`/searchteams.php?t=${encodeURIComponent(searchB)}`)
     ]);
     const idA = tdA?.teams?.[0]?.idTeam;
     const idB = tdB?.teams?.[0]?.idTeam;
